@@ -34,7 +34,7 @@ class UserController extends AbstractController
     }
 
     #[Route('/api/users/{id}', name: 'deleteUser', methods: ['DELETE'])]
-    public function deleteBook(User $user, EntityManagerInterface $entityManager): JsonResponse
+    public function deleteUser(User $user, EntityManagerInterface $entityManager): JsonResponse
     {
 
         $entityManager->remove($user);

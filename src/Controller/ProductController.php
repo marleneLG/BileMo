@@ -2,7 +2,9 @@
 
 namespace App\Controller;
 
+use App\Entity\Product;
 use App\Repository\ProductRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -29,5 +31,15 @@ class ProductController extends AbstractController
             return new JsonResponse($jsonProduct, Response::HTTP_OK, [], true);
         }
         return new JsonResponse(null, Response::HTTP_NOT_FOUND);
+    }
+
+    #[Route('/api/products/{id}', name: 'deleteProduct', methods: ['DELETE'])]
+    public function deleteProduct(Product $product, EntityManagerInterface $entityManager): JsonResponse
+    {
+
+        $entityManager->remove($product);
+        $entityManager->flush();
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 }
