@@ -19,6 +19,7 @@ class AppFixtures extends Fixture
             $user->setLastname('Lastname : ' . $i);
             $user->setEmail('Email : ' . $i);
             $user->setPassword('Password : ' . $i);
+            $listUser[] = $user;
             $manager->persist($user);
         }
 
@@ -28,16 +29,17 @@ class AppFixtures extends Fixture
             $customer->setName('Name : ' . $i);
             $customer->setEmail('Email : ' . $i);
             $customer->setPassword('Password : ' . $i);
+            $customer->addUser($listUser[array_rand($listUser)]);
             $manager->persist($customer);
         }
 
         // Création d'une vingtaine de Product
         for ($i = 0; $i < 20; $i++) {
-            $customer = new Product;
-            $customer->setName('Name : ' . $i);
-            $customer->setDescription('Description : ' . $i);
-            $customer->setPrice('Price : ' . $i);
-            $manager->persist($customer);
+            $product = new Product;
+            $product->setName('Name : ' . $i);
+            $product->setDescription('Description : ' . $i);
+            $product->setPrice($i);
+            $manager->persist($product);
         }
 
         $manager->flush();
