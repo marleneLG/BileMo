@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 
 class CustomerController extends AbstractController
@@ -40,6 +41,22 @@ class CustomerController extends AbstractController
         $location = $urlGenerator->generate('detailCustomer', ['id' => $customer->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonCustomer, Response::HTTP_CREATED, ["Location" => $location], true);
+    }
+
+    #[Route('/api/customers/{id}', name: "updateCustomer", methods: ['PUT'])]
+
+    public function updateCustomer(Request $request, SerializerInterface $serializer, Customer $currentCustomer, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $updatedCustomer = $serializer->deserialize(
+            $request->getContent(),
+            Customer::class,
+            'json',
+            [AbstractNormalizer::OBJECT_TO_POPULATE => $currentCustomer]
+        );
+
+        $entityManager->persist($updatedCustomer);
+        $entityManager->flush();
+        return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }
 
     #[Route('/api/products/{id}', name: 'detailCustomer', methods: ['GET'])]
