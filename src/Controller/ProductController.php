@@ -7,8 +7,10 @@ use App\Repository\ProductRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 
 class ProductController extends AbstractController
@@ -31,6 +33,21 @@ class ProductController extends AbstractController
             return new JsonResponse($jsonProduct, Response::HTTP_OK, [], true);
         }
         return new JsonResponse(null, Response::HTTP_NOT_FOUND);
+    }
+
+    #[Route('/api/products', name: "createProduct", methods: ['POST'])]
+    public function createProduct(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator): JsonResponse
+    {
+
+        $product = $serializer->deserialize($request->getContent(), Product::class, 'json');
+        $entityManager->persist($product);
+        $entityManager->flush();
+
+        $jsonProduct = $serializer->serialize($product, 'json');
+
+        $location = $urlGenerator->generate('detailProduct', ['id' => $product->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        return new JsonResponse($jsonProduct, Response::HTTP_CREATED, ["Location" => $location], true);
     }
 
     #[Route('/api/products/{id}', name: 'deleteProduct', methods: ['DELETE'])]
