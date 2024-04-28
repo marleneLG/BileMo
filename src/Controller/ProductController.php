@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 
 class ProductController extends AbstractController
@@ -48,6 +49,22 @@ class ProductController extends AbstractController
         $location = $urlGenerator->generate('detailProduct', ['id' => $product->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonProduct, Response::HTTP_CREATED, ["Location" => $location], true);
+    }
+
+    #[Route('/api/products/{id}', name: "updateProduct", methods: ['PUT'])]
+
+    public function updateProduct(Request $request, SerializerInterface $serializer, Product $currentProduct, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $updatedProduct = $serializer->deserialize(
+            $request->getContent(),
+            Product::class,
+            'json',
+            [AbstractNormalizer::OBJECT_TO_POPULATE => $currentProduct]
+        );
+
+        $entityManager->persist($updatedProduct);
+        $entityManager->flush();
+        return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }
 
     #[Route('/api/products/{id}', name: 'deleteProduct', methods: ['DELETE'])]
