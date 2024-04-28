@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Repository\CustomerRepository;
-use App\Repository\CustomerRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -73,9 +72,6 @@ class UserController extends AbstractController
             'json',
             [AbstractNormalizer::OBJECT_TO_POPULATE => $currentUser]
         );
-        $content = $request->toArray();
-        $idCustomer = $content['idCustomer'] ?? -1;
-        $updatedUser->setAuthor($customerRepository->find($idCustomer));
 
         $entityManager->persist($updatedUser);
         $entityManager->flush();
