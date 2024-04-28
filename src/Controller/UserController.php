@@ -15,7 +15,7 @@ class UserController extends AbstractController
     public function getUserList(UserRepository $userRepository, SerializerInterface $serializer): JsonResponse
     {
         $userList = $userRepository->findAll();
-        $jsonUserList = $serializer->serialize($userList, 'json');
+        $jsonUserList = $serializer->serialize($userList, 'json', ['groups' => ['customer:read']]);
         return new JsonResponse($jsonUserList, Response::HTTP_OK, [], true);
     }
 
@@ -25,7 +25,7 @@ class UserController extends AbstractController
 
         $user = $userRepository->find($id);
         if ($user) {
-            $jsonUser = $serializer->serialize($user, 'json');
+            $jsonUser = $serializer->serialize($user, 'json', ['groups' => ['customer:read']]);
             return new JsonResponse($jsonUser, Response::HTTP_OK, [], true);
         }
         return new JsonResponse(null, Response::HTTP_NOT_FOUND);
