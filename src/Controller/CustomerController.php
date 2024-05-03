@@ -59,7 +59,7 @@ class CustomerController extends AbstractController
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }
 
-    #[Route('/api/products/{id}', name: 'detailCustomer', methods: ['GET'])]
+    #[Route('/api/customers/{id}', name: 'detailCustomer', methods: ['GET'])]
     public function getDetailCustomer(int $id, SerializerInterface $serializer, CustomerRepository $customerRepository): JsonResponse
     {
 
