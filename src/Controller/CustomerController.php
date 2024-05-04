@@ -31,7 +31,9 @@ class CustomerController extends AbstractController
 
         // On cherche le user qui correspond et on l'assigne au customer.
         // Si "find" ne trouve pas le user, alors null sera retourné.
-        $customer->addUser($userRepository->find($idUser));
+        if ($idUser) {
+            $customer->addUser($userRepository->find($idUser));
+        }
 
         $entityManager->persist($customer);
         $entityManager->flush();
