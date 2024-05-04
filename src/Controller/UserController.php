@@ -14,14 +14,24 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 class UserController extends AbstractController
 {
     #[Route('/api/users', name: 'app_user', methods: ['GET'])]
-    public function getUserList(UserRepository $userRepository, SerializerInterface $serializer): JsonResponse
+    public function getUserList(UserRepository $userRepository, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cachePool): JsonResponse
     {
-        $userList = $userRepository->findAll();
-        $jsonUserList = $serializer->serialize($userList, 'json', ['groups' => ['customer:read']]);
+        $page = $request->get('page', 1);
+        $limit = $request->get('limit', 1);
+
+        $idCache = "getAllUsers-" . $page . "-" . $limit;
+
+        $jsonUserList = $cachePool->get($idCache, function (ItemInterface $item) use ($userRepository, $page, $limit, $serializer) {
+            $item->tag("usersCache");
+            $userList = $userRepository->findAllWithPagination($page, $limit);
+            return  $serializer->serialize($userList, 'json', ['groups' => ['customer:read']]);
+        });
         return new JsonResponse($jsonUserList, Response::HTTP_OK, [], true);
     }
 
@@ -79,8 +89,9 @@ class UserController extends AbstractController
     }
 
     #[Route('/api/users/{id}', name: 'deleteUser', methods: ['DELETE'])]
-    public function deleteUser(User $user, EntityManagerInterface $entityManager): JsonResponse
+    public function deleteUser(User $user, EntityManagerInterface $entityManager, TagAwareCacheInterface $cachePool): JsonResponse
     {
+        $cachePool->invalidateTags(["usersCache"]);
 
         $entityManager->remove($user);
         $entityManager->flush();
