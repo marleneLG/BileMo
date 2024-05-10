@@ -15,10 +15,12 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 class ProductController extends AbstractController
 {
     #[Route('api/products', name: 'app_product', methods: ['GET'])]
+    #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour voir les produits')]
     public function getProductList(ProductRepository $productRepository, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $page = $request->get('page', 1);
@@ -35,6 +37,7 @@ class ProductController extends AbstractController
     }
 
     #[Route('/api/products/{id}', name: 'detailProduct', methods: ['GET'])]
+    #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour voir le produit')]
     public function getDetailProduct(int $id, SerializerInterface $serializer, ProductRepository $productRepository): JsonResponse
     {
 
@@ -47,6 +50,7 @@ class ProductController extends AbstractController
     }
 
     #[Route('/api/products', name: "createProduct", methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer le produit')]
     public function createProduct(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator): JsonResponse
     {
 
@@ -62,7 +66,7 @@ class ProductController extends AbstractController
     }
 
     #[Route('/api/products/{id}', name: "updateProduct", methods: ['PUT'])]
-
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier le produit')]
     public function updateProduct(Request $request, SerializerInterface $serializer, Product $currentProduct, EntityManagerInterface $entityManager): JsonResponse
     {
         $updatedProduct = $serializer->deserialize(
@@ -78,6 +82,7 @@ class ProductController extends AbstractController
     }
 
     #[Route('/api/products/{id}', name: 'deleteProduct', methods: ['DELETE'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer le produit')]
     public function deleteProduct(Product $product, EntityManagerInterface $entityManager, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $cachePool->invalidateTags(["productsCache"]);
