@@ -5,6 +5,8 @@ namespace App\Repository;
 use App\Entity\Customer;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 
 /**
  * @extends ServiceEntityRepository<Customer>
@@ -27,6 +29,20 @@ class CustomerRepository extends ServiceEntityRepository
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
         return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Used to upgrade (rehash) the user's password automatically over time.
+     */
+    public function upgradePassword(PasswordAuthenticatedUserInterface $customer, string $newHashedPassword): void
+    {
+        if (!$customer instanceof Customer) {
+            throw new UnsupportedUserException(sprintf('Instances of "%s" are not supported.', $customer::class));
+        }
+
+        $customer->setPassword($newHashedPassword);
+        $this->getEntityManager()->persist($customer);
+        $this->getEntityManager()->flush();
     }
 
     //    /**
