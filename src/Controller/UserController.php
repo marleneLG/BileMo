@@ -16,6 +16,8 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+
 
 class UserController extends AbstractController
 {
@@ -47,6 +49,7 @@ class UserController extends AbstractController
         return new JsonResponse(null, Response::HTTP_NOT_FOUND);
     }
 
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un user')]
     #[Route('/api/users', name: "createUser", methods: ['POST'])]
     public function createUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator, CustomerRepository $customerRepository): JsonResponse
     {
@@ -73,7 +76,7 @@ class UserController extends AbstractController
     }
 
     #[Route('/api/users/{id}', name: "updateUser", methods: ['PUT'])]
-
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier un user')]
     public function updateUser(Request $request, SerializerInterface $serializer, User $currentUser, EntityManagerInterface $entityManager): JsonResponse
     {
         $updatedUser = $serializer->deserialize(
@@ -89,6 +92,7 @@ class UserController extends AbstractController
     }
 
     #[Route('/api/users/{id}', name: 'deleteUser', methods: ['DELETE'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un user')]
     public function deleteUser(User $user, EntityManagerInterface $entityManager, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $cachePool->invalidateTags(["usersCache"]);

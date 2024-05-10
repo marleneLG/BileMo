@@ -26,6 +26,14 @@ class AppFixtures extends Fixture
         $user = new User;
         $user->setFirstname('henry');
         $user->setLastname('dupont');
+        $user->setEmail("user2@bookapi.com");
+        $listUser[] = $user;
+        $manager->persist($user);
+
+        // // Création d'un user "normal"
+        $user = new User;
+        $user->setFirstname('henry');
+        $user->setLastname('dupont');
         $user->setEmail("user@bookapi.com");
         $user->setRoles(["ROLE_USER"]);
         $listUser[] = $user;
@@ -40,16 +48,31 @@ class AppFixtures extends Fixture
         $userAdmin->setPassword($this->userPasswordHasher->hashPassword($userAdmin, "password"));
         $manager->persist($userAdmin);
 
-        // // Création d'une vingtaine de User
-        // for ($i = 0; $i < 5; $i++) {
-        //     $user = new User;
-        //     $user->setFirstname('Firstname : ' . $i);
-        //     $user->setLastname('Lastname : ' . $i);
-        //     $user->setEmail('Email : ' . $i);
-        //     $user->setPassword('Password : ' . $i);
-        //     $listUser[] = $user;
-        //     $manager->persist($user);
-        // }
+        // Création d'un customer
+        $userCustomer = new Customer;
+        $userCustomer->setName('Free');
+        $userCustomer->setEmail("free@free.com");
+        $userCustomer->setRoles(["ROLE_USER"]);
+        $userCustomer->setPassword($this->userPasswordHasher->hashPassword($userCustomer, "password"));
+        $manager->persist($userCustomer);
+
+        // Création d'un user admin
+        $userCustomer = new Customer;
+        $userCustomer->setName('Marlene');
+        $userCustomer->setEmail("admin@bilemo.com");
+        $userAdmin->setRoles(["ROLE_ADMIN"]);
+        $userCustomer->setPassword($this->userPasswordHasher->hashPassword($userCustomer, "password"));
+        $manager->persist($userCustomer);
+
+        // Création d'une vingtaine de User
+        for ($i = 0; $i < 5; $i++) {
+            $user = new User;
+            $user->setFirstname('Firstname : ' . $i);
+            $user->setLastname('Lastname : ' . $i);
+            $user->setEmail('Email : ' . $i);
+            $listUser[] = $user;
+            $manager->persist($user);
+        }
 
         // Création d'une vingtaine de Client
         for ($i = 0; $i < 20; $i++) {
