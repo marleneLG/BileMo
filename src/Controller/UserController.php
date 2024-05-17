@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Repository\CustomerRepository;
 use App\Repository\UserRepository;
+use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -12,12 +13,12 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
-use Symfony\Component\Serializer\SerializerInterface;
+use JMS\Serializer\SerializationContext;
+use JMS\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-
 
 class UserController extends AbstractController
 {
@@ -33,7 +34,9 @@ class UserController extends AbstractController
         $jsonUserList = $cachePool->get($idCache, function (ItemInterface $item) use ($userRepository, $page, $limit, $serializer) {
             $item->tag("usersCache");
             $userList = $userRepository->findAllWithPagination($page, $limit);
-            return  $serializer->serialize($userList, 'json', ['groups' => ['customer:read']]);
+            $context = SerializationContext::create()->setGroups(['customer:read']);
+
+            return  $serializer->serialize($userList, 'json', $context);
         });
         return new JsonResponse($jsonUserList, Response::HTTP_OK, [], true);
     }
@@ -45,7 +48,8 @@ class UserController extends AbstractController
 
         $user = $userRepository->find($id);
         if ($user) {
-            $jsonUser = $serializer->serialize($user, 'json', ['groups' => ['customer:read']]);
+            $context = SerializationContext::create()->setGroups(['customer:read']);
+            $jsonUser = $serializer->serialize($user, 'json', $context);
             return new JsonResponse($jsonUser, Response::HTTP_OK, [], true);
         }
         return new JsonResponse(null, Response::HTTP_NOT_FOUND);
@@ -62,6 +66,10 @@ class UserController extends AbstractController
 
         // Récupération de l'idCustomer. S'il n'est pas défini, alors on met -1 par défaut.
         $idCustomer = $content['idCustomer'] ?? -1;
+        $created_at = new DateTime();
+        $updated_at = new DateTime();
+        $user->setCreatedAt($created_at);
+        $user->setUpdatedAt($updated_at);
 
         // On cherche customer qui correspond et on l'assigne au user.
         // Si "find" ne trouve pas customer, alors null sera retourné.
@@ -70,7 +78,9 @@ class UserController extends AbstractController
         $entityManager->persist($user);
         $entityManager->flush();
 
-        $jsonUser = $serializer->serialize($user, 'json', ['groups' => 'getCustomers']);
+        $context = SerializationContext::create()->setGroups(['customer:read']);
+
+        $jsonUser = $serializer->serialize($user, 'json', $context);
 
         $location = $urlGenerator->generate('detailUser', ['id' => $user->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
@@ -79,17 +89,30 @@ class UserController extends AbstractController
 
     #[Route('/api/users/{id}', name: "updateUser", methods: ['PUT'])]
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour modifier un user')]
-    public function updateUser(Request $request, SerializerInterface $serializer, User $currentUser, EntityManagerInterface $entityManager): JsonResponse
+    public function updateUser(Request $request, SerializerInterface $serializer, User $currentUser, CustomerRepository $customerRepository, EntityManagerInterface $entityManager, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
     {
-        $updatedUser = $serializer->deserialize(
-            $request->getContent(),
-            User::class,
-            'json',
-            [AbstractNormalizer::OBJECT_TO_POPULATE => $currentUser]
-        );
+        $updatedUser = $serializer->deserialize($request->getContent(), User::class, 'json');
+        $currentUser->setFirstname($updatedUser->getFirstname());
+        $currentUser->setLastname($updatedUser->getLastname());
+        $currentUser->setEmail($updatedUser->getEmail());
+        $currentUser->setRoles($updatedUser->getRoles());
+        $updated_at = new DateTime();
+        $currentUser->setUpdatedAt($updated_at);
+        // On vérifie les erreurs
+        $errors = $validator->validate($currentUser);
+        if ($errors->count() > 0) {
+            return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
+        }
 
-        $entityManager->persist($updatedUser);
+        $content = $request->toArray();
+        $idCustomer = $content['idCustomer'] ?? -1;
+        $currentUser->addCustomer($customerRepository->find($idCustomer));
+
+        $entityManager->persist($currentUser);
         $entityManager->flush();
+
+        $cache->invalidateTags(["usersCache"]);
+
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }
 
