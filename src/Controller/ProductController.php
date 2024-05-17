@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Product;
 use App\Repository\ProductRepository;
+use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -11,8 +12,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
-use Symfony\Component\Serializer\SerializerInterface;
+use JMS\Serializer\SerializationContext;
+use JMS\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -31,7 +33,8 @@ class ProductController extends AbstractController
         $jsonProductList = $cachePool->get($idCache, function (ItemInterface $item) use ($productRepository, $page, $limit, $serializer) {
             $item->tag("productsCache");
             $productList = $productRepository->findAllWithPagination($page, $limit);
-            return  $serializer->serialize($productList, 'json');
+            $context = SerializationContext::create();
+            return  $serializer->serialize($productList, 'json', $context);
         });
         return new JsonResponse($jsonProductList, Response::HTTP_OK, [], true);
     }
@@ -40,10 +43,10 @@ class ProductController extends AbstractController
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour voir le produit')]
     public function getDetailProduct(int $id, SerializerInterface $serializer, ProductRepository $productRepository): JsonResponse
     {
-
         $product = $productRepository->find($id);
         if ($product) {
-            $jsonProduct = $serializer->serialize($product, 'json');
+            $context = SerializationContext::create();
+            $jsonProduct = $serializer->serialize($product, 'json', $context);
             return new JsonResponse($jsonProduct, Response::HTTP_OK, [], true);
         }
         return new JsonResponse(null, Response::HTTP_NOT_FOUND);
@@ -53,13 +56,17 @@ class ProductController extends AbstractController
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer le produit')]
     public function createProduct(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator): JsonResponse
     {
-
         $product = $serializer->deserialize($request->getContent(), Product::class, 'json');
+        $created_at = new DateTime();
+        $updated_at = new DateTime();
+        $product->setCreatedAt($created_at);
+        $product->setUpdatedAt($updated_at);
         $entityManager->persist($product);
         $entityManager->flush();
 
-        $jsonProduct = $serializer->serialize($product, 'json');
+        $context = SerializationContext::create();
 
+        $jsonProduct = $serializer->serialize($product, 'json', $context);
         $location = $urlGenerator->generate('detailProduct', ['id' => $product->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonProduct, Response::HTTP_CREATED, ["Location" => $location], true);
@@ -67,16 +74,21 @@ class ProductController extends AbstractController
 
     #[Route('/api/products/{id}', name: "updateProduct", methods: ['PUT'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier le produit')]
-    public function updateProduct(Request $request, SerializerInterface $serializer, Product $currentProduct, EntityManagerInterface $entityManager): JsonResponse
+    public function updateProduct(Request $request, SerializerInterface $serializer, Product $currentProduct, EntityManagerInterface $entityManager, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
     {
-        $updatedProduct = $serializer->deserialize(
-            $request->getContent(),
-            Product::class,
-            'json',
-            [AbstractNormalizer::OBJECT_TO_POPULATE => $currentProduct]
-        );
+        $updatedProduct = $serializer->deserialize($request->getContent(), Product::class, 'json');
+        $currentProduct->setName($updatedProduct->getName());
+        $currentProduct->setDescription($updatedProduct->getDescription());
+        $currentProduct->setPrice($updatedProduct->getPrice());
+        $updated_at = new DateTime();
+        $currentProduct->setUpdatedAt($updated_at);
+        // On vérifie les erreurs
+        $errors = $validator->validate($currentProduct);
+        if ($errors->count() > 0) {
+            return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
+        }
 
-        $entityManager->persist($updatedProduct);
+        $entityManager->persist($currentProduct);
         $entityManager->flush();
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }

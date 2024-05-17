@@ -9,7 +9,38 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Component\Serializer\Annotation\Groups;
+use JMS\Serializer\Annotation\Groups;
+use Hateoas\Configuration\Annotation as Hateoas;
+
+/**
+ * @Hateoas\Relation(
+ *      "self",
+ *      href = @Hateoas\Route(
+ *          "detailUser",
+ *          parameters = {
+ *              "id" = "expr(object.getId())"
+ *          }
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(groups="customer:read")
+ * )
+ * @Hateoas\Relation(
+ *      "delete",
+ *      href = @Hateoas\Route(
+ *          "deleteUser",
+ *          parameters = { "id" = "expr(object.getId())" },
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(groups="customer:read", excludeIf = "expr(not is_granted('ROLE_USER'))"),
+ * )
+ *
+ * @Hateoas\Relation(
+ *      "update",
+ *      href = @Hateoas\Route(
+ *          "updateUser",
+ *          parameters = { "id" = "expr(object.getId())" },
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(groups="customer:read", excludeIf = "expr(not is_granted('ROLE_USER'))"),
+ * )
+ */
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
@@ -179,6 +210,8 @@ class User implements UserInterface
 
     public function addCustomer(Customer $customer): static
     {
+        $this->customers = new ArrayCollection();
+
         if (!$this->customers->contains($customer)) {
             $this->customers->add($customer);
             $customer->addUser($this);
