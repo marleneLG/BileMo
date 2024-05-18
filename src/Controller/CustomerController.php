@@ -19,9 +19,43 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Nelmio\ApiDocBundle\Annotation\Model;
+use Nelmio\ApiDocBundle\Annotation\Security;
+use OpenApi\Annotations as OA;
 
 class CustomerController extends AbstractController
 {
+    /**
+     * This method allows to recover all customers.
+     *
+     * @OA\Response(
+     *     response=200,
+     *     description="Returns the list of customers",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=Customer::class, groups={"customer:read"}))
+     *     )
+     * )
+     * @OA\Parameter(
+     *     name="page",
+     *     in="query",
+     *     description="The page you want to retrieve",
+     *     @OA\Schema(type="int")
+     * )
+     *
+     * @OA\Parameter(
+     *     name="limit",
+     *     in="query",
+     *     description="The number of items you want to recover",
+     *     @OA\Schema(type="int")
+     * )
+     * @OA\Tag(name="Customers")
+     *
+     * @param CustomerRepository $CustomerRepository
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @return JsonResponse
+     */
     #[Route('api/customers', name: 'app_customer', methods: ['GET'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour voir les clients')]
     public function getCustomerList(CustomerRepository $customerRepository, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cachePool): JsonResponse
@@ -40,6 +74,56 @@ class CustomerController extends AbstractController
         return new JsonResponse($jsonCustomerList, Response::HTTP_OK, [], true);
     }
 
+    /**
+     * This method retrieves the details of a customer.
+     *
+     * @OA\Response(
+     *     response=200,
+     *     description="Return the customer",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=Customer::class, groups={"customer:read"}))
+     *     )
+     * )
+     * @OA\Tag(name="Customers")
+     *
+     * @param CustomerRepository $CustomerRepository
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @return JsonResponse
+     */
+    #[Route('/api/customers/{id}', name: 'detailCustomer', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour voir le client')]
+    public function getDetailCustomer(int $id, SerializerInterface $serializer, CustomerRepository $customerRepository): JsonResponse
+    {
+
+        $customer = $customerRepository->find($id);
+        if ($customer) {
+            $context = SerializationContext::create()->setGroups(['customer:read']);
+            $jsonCustomer = $serializer->serialize($customer, 'json', $context);
+            return new JsonResponse($jsonCustomer, Response::HTTP_OK, [], true);
+        }
+        return new JsonResponse(null, Response::HTTP_NOT_FOUND);
+    }
+
+    /**
+     * This method creates a customer.
+     *
+     * @OA\Response(
+     *     response=200,
+     *     description="create customer",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=Customer::class, groups={"customer:read"}))
+     *     )
+     * )
+     * @OA\Tag(name="Customers")
+     *
+     * @param CustomerRepository $CustomerRepository
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @return JsonResponse
+     */
     #[Route('/api/customers', name: "createCustomer", methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer les clients')]
     public function createCustomer(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator, UserRepository $userRepository): JsonResponse
@@ -73,6 +157,24 @@ class CustomerController extends AbstractController
         return new JsonResponse($jsonCustomer, Response::HTTP_CREATED, ["Location" => $location], true);
     }
 
+    /**
+     * This method allows to modify a customer.
+     *
+     * @OA\Response(
+     *     response=200,
+     *     description="update customer",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=Customer::class, groups={"customer:read"}))
+     *     )
+     * )
+     * @OA\Tag(name="Customers")
+     *
+     * @param CustomerRepository $CustomerRepository
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @return JsonResponse
+     */
     #[Route('/api/customers/{id}', name: "updateCustomer", methods: ['PUT'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier les clients')]
     public function updateCustomer(Request $request, SerializerInterface $serializer, Customer $currentCustomer, EntityManagerInterface $entityManager, UserRepository $userRepository, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
@@ -99,20 +201,24 @@ class CustomerController extends AbstractController
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }
 
-    #[Route('/api/customers/{id}', name: 'detailCustomer', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour voir le client')]
-    public function getDetailCustomer(int $id, SerializerInterface $serializer, CustomerRepository $customerRepository): JsonResponse
-    {
-
-        $customer = $customerRepository->find($id);
-        if ($customer) {
-            $context = SerializationContext::create()->setGroups(['customer:read']);
-            $jsonCustomer = $serializer->serialize($customer, 'json', $context);
-            return new JsonResponse($jsonCustomer, Response::HTTP_OK, [], true);
-        }
-        return new JsonResponse(null, Response::HTTP_NOT_FOUND);
-    }
-
+    /**
+     * This method removes a customer.
+     *
+     * @OA\Response(
+     *     response=200,
+     *     description="delete customer",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=Customer::class, groups={"customer:read"}))
+     *     )
+     * )
+     * @OA\Tag(name="Customers")
+     *
+     * @param CustomerRepository $CustomerRepository
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @return JsonResponse
+     */
     #[Route('/api/customers/{id}', name: 'deleteCustomer', methods: ['DELETE'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer les clients')]
     public function deleteCustomer(Customer $customer, EntityManagerInterface $entityManager, TagAwareCacheInterface $cachePool): JsonResponse
