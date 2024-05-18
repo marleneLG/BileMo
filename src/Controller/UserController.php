@@ -19,9 +19,43 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Nelmio\ApiDocBundle\Annotation\Model;
+use Nelmio\ApiDocBundle\Annotation\Security;
+use OpenApi\Annotations as OA;
 
 class UserController extends AbstractController
 {
+    /**
+     * This method allows to recover all users.
+     *
+     * @OA\Response(
+     *     response=200,
+     *     description="Returns the list of users",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=User::class, groups={"customer:read"}))
+     *     )
+     * )
+     * @OA\Parameter(
+     *     name="page",
+     *     in="query",
+     *     description="The page you want to retrieve",
+     *     @OA\Schema(type="int")
+     * )
+     *
+     * @OA\Parameter(
+     *     name="limit",
+     *     in="query",
+     *     description="The number of items you want to recover",
+     *     @OA\Schema(type="int")
+     * )
+     * @OA\Tag(name="Users")
+     *
+     * @param UserRepository $UserRepository
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @return JsonResponse
+     */
     #[Route('/api/users', name: 'app_user', methods: ['GET'])]
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour voir les user')]
     public function getUserList(UserRepository $userRepository, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cachePool): JsonResponse
@@ -41,6 +75,24 @@ class UserController extends AbstractController
         return new JsonResponse($jsonUserList, Response::HTTP_OK, [], true);
     }
 
+    /**
+     * This method retrieves the details of a user.
+     *
+     * @OA\Response(
+     *     response=200,
+     *     description="Return the user",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=User::class, groups={"customer:read"}))
+     *     )
+     * )
+     * @OA\Tag(name="Users")
+     *
+     * @param UserRepository $UserRepository
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @return JsonResponse
+     */
     #[Route('/api/users/{id}', name: 'detailUser', methods: ['GET'])]
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour voir un user')]
     public function getDetailUser(int $id, SerializerInterface $serializer, UserRepository $userRepository): JsonResponse
@@ -55,6 +107,24 @@ class UserController extends AbstractController
         return new JsonResponse(null, Response::HTTP_NOT_FOUND);
     }
 
+    /**
+     * This method creates a user.
+     *
+     * @OA\Response(
+     *     response=200,
+     *     description="create user",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=User::class, groups={"customer:read"}))
+     *     )
+     * )
+     * @OA\Tag(name="Users")
+     *
+     * @param UserRepository $UserRepository
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @return JsonResponse
+     */
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour créer un user')]
     #[Route('/api/users', name: "createUser", methods: ['POST'])]
     public function createUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator, CustomerRepository $customerRepository): JsonResponse
@@ -87,6 +157,24 @@ class UserController extends AbstractController
         return new JsonResponse($jsonUser, Response::HTTP_CREATED, ["Location" => $location], true);
     }
 
+    /**
+     * This method allows to modify a user.
+     *
+     * @OA\Response(
+     *     response=200,
+     *     description="update user",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=User::class, groups={"customer:read"}))
+     *     )
+     * )
+     * @OA\Tag(name="Users")
+     *
+     * @param UserRepository $UserRepository
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @return JsonResponse
+     */
     #[Route('/api/users/{id}', name: "updateUser", methods: ['PUT'])]
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour modifier un user')]
     public function updateUser(Request $request, SerializerInterface $serializer, User $currentUser, CustomerRepository $customerRepository, EntityManagerInterface $entityManager, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
@@ -116,6 +204,24 @@ class UserController extends AbstractController
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }
 
+    /**
+     * This method removes a user.
+     *
+     * @OA\Response(
+     *     response=200,
+     *     description="delete user",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=User::class, groups={"customer:read"}))
+     *     )
+     * )
+     * @OA\Tag(name="Users")
+     *
+     * @param UserRepository $UserRepository
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @return JsonResponse
+     */
     #[Route('/api/users/{id}', name: 'deleteUser', methods: ['DELETE'])]
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour supprimer un user')]
     public function deleteUser(User $user, EntityManagerInterface $entityManager, TagAwareCacheInterface $cachePool): JsonResponse
