@@ -110,6 +110,18 @@ class UserController extends AbstractController
     /**
      * This method creates a user.
      *
+     * @OA\RequestBody(
+     *     required=true,
+     *     @OA\MediaType(
+     *       mediaType="application/json",
+     *       @OA\Schema(
+     *         @OA\Property(property="firstname", type="string", example="John"),
+     *         @OA\Property(property="lastname", description="The lastname of the new user.", type="string", example="Doe"),
+     *         @OA\Property(property="idCustomer", description="The idCustomer of the new user.", type="int", example="1"),
+     *         @OA\Property(property="email", description="Email address of the new user.", type="string", format="email", example="j.doe91@yopmail.fr")
+     *       )
+     *     )
+     *   ),
      * @OA\Response(
      *     response=200,
      *     description="create user",
@@ -118,6 +130,16 @@ class UserController extends AbstractController
      *        @OA\Items(ref=@Model(type=User::class, groups={"customer:read"}))
      *     )
      * )
+     *   ),
+     *   @OA\Response(
+     *      response=400,
+     *      description="Erreur de syntaxe"
+     *   ),
+     *   @OA\Response(
+     *     response=401,
+     *     description="JWT Token not found"
+     *   ),
+     *  
      * @OA\Tag(name="Users")
      *
      * @param UserRepository $UserRepository
@@ -158,8 +180,20 @@ class UserController extends AbstractController
     }
 
     /**
-     * This method allows to modify a user.
+     * This method allows to modif a user.
      *
+     * @OA\RequestBody(
+     *     required=true,
+     *     @OA\MediaType(
+     *       mediaType="application/json",
+     *       @OA\Schema(
+     *         @OA\Property(property="firstname", type="string", example="John"),
+     *         @OA\Property(property="lastname", description="The lastname of the new user.", type="string", example="Doe"),
+     *         @OA\Property(property="idCustomer", description="The idCustomer of the new user.", type="int", example="1"),
+     *         @OA\Property(property="email", description="Email address of the new user.", type="string", format="email", example="j.doe91@yopmail.fr")
+     *       )
+     *     )
+     *   ), 
      * @OA\Response(
      *     response=200,
      *     description="update user",

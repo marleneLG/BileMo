@@ -109,20 +109,31 @@ class CustomerController extends AbstractController
     /**
      * This method creates a customer.
      *
-     * @OA\Response(
-     *     response=200,
-     *     description="create customer",
-     *     @OA\JsonContent(
-     *        type="array",
-     *        @OA\Items(ref=@Model(type=Customer::class, groups={"customer:read"}))
+     * @OA\RequestBody(
+     *     required=true,
+     *     @OA\MediaType(
+     *       mediaType="application/json",
+     *       @OA\Schema(
+     *         @OA\Property(property="name", type="string", example="John"),
+     *         @OA\Property(property="password", description="The password of the new customer.", type="string", example="password"),
+     *         @OA\Property(property="idUser", description="The idUser of the new customer.", type="int", example="1"),
+     *         @OA\Property(property="email", description="Email address of the new customer.", type="string", format="email", example="j.doe91@yopmail.fr")
+     *       )
      *     )
+     *   ),
+     *   @OA\Response(
+     *     response=201,
+     *     description="Utilisateur créer",
+     *   ),
+     *   @OA\Response(response=400, description="Erreur de syntaxe"),
+     *   @OA\Response(
+     *     response=401,
+     *     description="JWT erreur de token"
+     *   ),
+     *  
      * )
-     * @OA\Tag(name="Customers")
-     *
-     * @param CustomerRepository $CustomerRepository
-     * @param SerializerInterface $serializer
-     * @param Request $request
-     * @return JsonResponse
+     *   @OA\Tag(name="Customers")
+     * @Route("/api/customers", name="createCustomer",methods={"POST"})
      */
     #[Route('/api/customers', name: "createCustomer", methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer les clients')]
@@ -159,7 +170,19 @@ class CustomerController extends AbstractController
 
     /**
      * This method allows to modify a customer.
-     *
+     * 
+     * @OA\RequestBody(
+     *     required=true,
+     *     @OA\MediaType(
+     *       mediaType="application/json",
+     *       @OA\Schema(
+     *         @OA\Property(property="name", type="string", example="John"),
+     *         @OA\Property(property="password", description="The password of the new customer.", type="string", example="password"),
+     *         @OA\Property(property="idUser", description="The idUser of the new customer.", type="int", example="1"),
+     *         @OA\Property(property="email", description="Email address of the new customer.", type="string", format="email", example="j.doe91@yopmail.fr")
+     *       )
+     *     )
+     *   ),
      * @OA\Response(
      *     response=200,
      *     description="update customer",
