@@ -1,0 +1,6 @@
+# This section will be executed before installing dependencies.
+# You should configure here what is needed for Composer to run without
+# issue: install libraries, prepare the database, etc.
+pre_composer_script: |
+    #!/bin/bash
+    composer install
