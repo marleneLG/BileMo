@@ -106,7 +106,18 @@ class ProductController extends AbstractController
 
     /**
      * This method creates a product.
-     *
+     * 
+     * @OA\RequestBody(
+     *     required=true,
+     *     @OA\MediaType(
+     *       mediaType="application/json",
+     *       @OA\Schema(
+     *         @OA\Property(property="name", type="string", example="Apple"),
+     *         @OA\Property(property="description", description="The description of the new product.", type="string", example="it's great product"),
+     *         @OA\Property(property="price", description="The price of the new product.", type="int", example="100"),
+     *       )
+     *     )
+     *   ),
      * @OA\Response(
      *     response=200,
      *     description="create product",
@@ -144,8 +155,18 @@ class ProductController extends AbstractController
 
     /**
      * This method allows to modify a product.
-     *
-     * @OA\Response(
+     * 
+     * @OA\RequestBody(
+     *     required=true,
+     *     @OA\MediaType(
+     *       mediaType="application/json",
+     *       @OA\Schema(
+     *         @OA\Property(property="name", type="string", example="Apple"),
+     *         @OA\Property(property="description", description="The description of the new product.", type="string", example="it's great product"),
+     *         @OA\Property(property="price", description="The price of the new product.", type="int", example="100"),
+     *       )
+     *     )
+     *   ),     * @OA\Response(
      *     response=200,
      *     description="update product",
      *     @OA\JsonContent(

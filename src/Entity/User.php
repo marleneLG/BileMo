@@ -11,6 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
 use JMS\Serializer\Annotation\Groups;
 use Hateoas\Configuration\Annotation as Hateoas;
+use OpenApi\Annotations as OA;
 
 /**
  * @Hateoas\Relation(
@@ -40,6 +41,8 @@ use Hateoas\Configuration\Annotation as Hateoas;
  *      ),
  *      exclusion = @Hateoas\Exclusion(groups="customer:read", excludeIf = "expr(not is_granted('ROLE_USER'))"),
  * )
+ * 
+ * @OA\Schema
  */
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
@@ -210,7 +213,6 @@ class User implements UserInterface
 
     public function addCustomer(Customer $customer): static
     {
-        $this->customers = new ArrayCollection();
 
         if (!$this->customers->contains($customer)) {
             $this->customers->add($customer);
