@@ -1,4 +1,4 @@
-# Project 6 : Snowtricks
+# Project 7 : Bilemo
 
 This project was created as part of my training with openclassrooms to present you my skills obtained through my learning.
 
@@ -43,7 +43,11 @@ composer install
 ```
 
 - Configure environment variables such as database connection in file `.env` :
+
+```shell
   `DATABASE_URL="mysql://app:!ChangeMe!@127.0.0.1:3306/app?serverVersion=10.11.2-MariaDB&charset=utf8mb4"`
+```
+
 - Create database:
 
 ```shell
@@ -72,8 +76,10 @@ openssl pkey -in config/jwt/private.pem -out config/jwt/public.pem -pubout
 
 - Enter your configuration parameters in your file . env:
 
+```shell
 ###> lexik/jwt-authentication-bundle ###
 JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem
 JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem
 JWT_PASSPHRASE=VotrePassePhrase
 ###< lexik/jwt-authentication-bundle ###
+```
