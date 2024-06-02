@@ -82,15 +82,11 @@ class User implements UserInterface
     #[Groups(['customer:read'])]
     private ?\DateTimeInterface $updated_at = null;
 
-    /**
-     * @var Collection<int, Customer>
-     */
-    #[ORM\ManyToMany(targetEntity: Customer::class, mappedBy: 'users')]
-    private Collection $customers;
+    #[ORM\ManyToOne(inversedBy: 'users')]
+    private ?Customer $customer = null;
 
     public function __construct()
     {
-        $this->customers = new ArrayCollection();
         $this->created_at = new DateTime();
         $this->updated_at = new DateTime();
     }
@@ -131,7 +127,7 @@ class User implements UserInterface
     {
         $roles = $this->roles;
         // guarantee every user at least has ROLE_USER
-        $roles[] = 'ROLE_USER';
+        $roles[] = '';
 
         return array_unique($roles);
     }
@@ -203,30 +199,14 @@ class User implements UserInterface
         return $this;
     }
 
-    /**
-     * @return Collection<int, Customer>
-     */
-    public function getCustomers(): Collection
+    public function getCustomer(): ?Customer
     {
-        return $this->customers;
+        return $this->customer;
     }
 
-    public function addCustomer(Customer $customer): static
+    public function setCustomer(?Customer $customer): static
     {
-
-        if (!$this->customers->contains($customer)) {
-            $this->customers->add($customer);
-            $customer->addUser($this);
-        }
-
-        return $this;
-    }
-
-    public function removeCustomer(Customer $customer): static
-    {
-        if ($this->customers->removeElement($customer)) {
-            $customer->removeUser($this);
-        }
+        $this->customer = $customer;
 
         return $this;
     }

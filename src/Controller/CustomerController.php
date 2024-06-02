@@ -49,6 +49,9 @@ class CustomerController extends AbstractController
      *     description="The number of items you want to recover",
      *     @OA\Schema(type="int")
      * )
+     * 
+     * @OA\Response(response=401, description="Expired JWT Token")
+     * 
      * @OA\Tag(name="Customers")
      *
      * @param CustomerRepository $CustomerRepository
@@ -57,7 +60,7 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('api/customers', name: 'app_customer', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour voir les clients')]
+    #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to see customers')]
     public function getCustomerList(CustomerRepository $customerRepository, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $page = $request->get('page', 1);
@@ -85,6 +88,10 @@ class CustomerController extends AbstractController
      *        @OA\Items(ref=@Model(type=Customer::class, groups={"customer:read"}))
      *     )
      * )
+     * 
+     * @OA\Response(response=404, description="This customer doesn't exist")
+     * @OA\Response(response=401, description="Expired JWT Token")
+     * 
      * @OA\Tag(name="Customers")
      *
      * @param CustomerRepository $CustomerRepository
@@ -93,11 +100,16 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'detailCustomer', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour voir le client')]
+    #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to see the customer')]
     public function getDetailCustomer(int $id, SerializerInterface $serializer, CustomerRepository $customerRepository): JsonResponse
     {
-
         $customer = $customerRepository->find($id);
+        if ($customer === null) {
+            return $this->json([
+                'status' => 404,
+                'message' => "This customer doesn't exist"
+            ], 404);
+        }
         if ($customer) {
             $context = SerializationContext::create()->setGroups(['customer:read']);
             $jsonCustomer = $serializer->serialize($customer, 'json', $context);
@@ -123,39 +135,30 @@ class CustomerController extends AbstractController
      *   ),
      *   @OA\Response(
      *     response=201,
-     *     description="Utilisateur créer",
-     *   ),
-     *   @OA\Response(response=400, description="Erreur de syntaxe"),
+     *     description="Customer created",
+     *   )
+     * 
      *   @OA\Response(
      *     response=401,
      *     description="JWT erreur de token"
-     *   ),
+     *   )
      *  
      * )
      *   @OA\Tag(name="Customers")
      * @Route("/api/customers", name="createCustomer",methods={"POST"})
      */
     #[Route('/api/customers', name: "createCustomer", methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer les clients')]
+    #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to create customers')]
     public function createCustomer(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator, UserRepository $userRepository): JsonResponse
     {
 
         $customer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
 
-        // Récupération de l'ensemble des données envoyées sous forme de tableau
-        $content = $request->toArray();
-
-        // Récupération de l'idUser. S'il n'est pas défini, alors on met -1 par défaut.
-        $idUser = $content['idUser'] ?? -1;
         $created_at = new DateTime();
         $updated_at = new DateTime();
         $customer->setCreatedAt($created_at);
         $customer->setUpdatedAt($updated_at);
-        // On cherche le user qui correspond et on l'assigne au customer.
-        // Si "find" ne trouve pas le user, alors null sera retourné.
-        if ($idUser) {
-            $customer->addUser($userRepository->find($idUser));
-        }
+        $customer->setRoles(array('ROLE_USER'));
 
         $entityManager->persist($customer);
         $entityManager->flush();
@@ -178,7 +181,6 @@ class CustomerController extends AbstractController
      *       @OA\Schema(
      *         @OA\Property(property="name", type="string", example="John"),
      *         @OA\Property(property="password", description="The password of the new customer.", type="string", example="password"),
-     *         @OA\Property(property="idUser", description="The idUser of the new customer.", type="int", example="1"),
      *         @OA\Property(property="email", description="Email address of the new customer.", type="string", format="email", example="j.doe91@yopmail.fr")
      *       )
      *     )
@@ -191,6 +193,11 @@ class CustomerController extends AbstractController
      *        @OA\Items(ref=@Model(type=Customer::class, groups={"customer:read"}))
      *     )
      * )
+     * 
+     * @OA\Response(response=401, description="Expired JWT Token")
+     * 
+     * @OA\Response(response=404, description="This customer doesn't exist")
+     * 
      * @OA\Tag(name="Customers")
      *
      * @param CustomerRepository $CustomerRepository
@@ -199,9 +206,15 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: "updateCustomer", methods: ['PUT'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier les clients')]
+    #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to modify customers')]
     public function updateCustomer(Request $request, SerializerInterface $serializer, Customer $currentCustomer, EntityManagerInterface $entityManager, UserRepository $userRepository, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
     {
+        if ($currentCustomer === null) {
+            return $this->json([
+                'status' => 404,
+                'message' => "This customer doesn't exist"
+            ], 404);
+        }
         $updatedCustomer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
         $currentCustomer->setName($updatedCustomer->getName());
         $currentCustomer->setEmail($updatedCustomer->getEmail());
@@ -213,10 +226,6 @@ class CustomerController extends AbstractController
         if ($errors->count() > 0) {
             return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
         }
-
-        $content = $request->toArray();
-        $idUser = $content['idUser'] ?? -1;
-        $currentCustomer->addUser($userRepository->find($idUser));
 
         $entityManager->persist($currentCustomer);
         $entityManager->flush();
@@ -235,6 +244,11 @@ class CustomerController extends AbstractController
      *        @OA\Items(ref=@Model(type=Customer::class, groups={"customer:read"}))
      *     )
      * )
+     * 
+     * @OA\Response(response=401, description="Expired JWT Token")
+     * 
+     * @OA\Response(response=404, description="This customer doesn't exist")
+     * 
      * @OA\Tag(name="Customers")
      *
      * @param CustomerRepository $CustomerRepository
@@ -243,11 +257,16 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'deleteCustomer', methods: ['DELETE'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer les clients')]
+    #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to delete customers')]
     public function deleteCustomer(Customer $customer, EntityManagerInterface $entityManager, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $cachePool->invalidateTags(["customersCache"]);
-
+        if ($customer === null) {
+            return $this->json([
+                'status' => 404,
+                'message' => "This customer doesn't exist"
+            ], 404);
+        }
         $entityManager->remove($customer);
         $entityManager->flush();
 
