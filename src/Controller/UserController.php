@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Customer;
 use App\Entity\User;
 use App\Repository\CustomerRepository;
 use App\Repository\UserRepository;
@@ -49,6 +50,9 @@ class UserController extends AbstractController
      *     description="The number of items you want to recover",
      *     @OA\Schema(type="int")
      * )
+     * 
+     * @OA\Response(response=401, description="Expired JWT Token")
+     * 
      * @OA\Tag(name="Users")
      *
      * @param UserRepository $UserRepository
@@ -57,7 +61,7 @@ class UserController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/users', name: 'app_user', methods: ['GET'])]
-    #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour voir les user')]
+    #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to see them use')]
     public function getUserList(UserRepository $userRepository, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $page = $request->get('page', 1);
@@ -86,6 +90,13 @@ class UserController extends AbstractController
      *        @OA\Items(ref=@Model(type=User::class, groups={"customer:read"}))
      *     )
      * )
+     * 
+     * @OA\Response(response=404, description="This user doesn't exist")
+     * 
+     * @OA\Response(response=403, description="Not authorized to see this user")
+     * 
+     * @OA\Response(response=401, description="Expired JWT Token")
+     * 
      * @OA\Tag(name="Users")
      *
      * @param UserRepository $UserRepository
@@ -94,11 +105,24 @@ class UserController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/users/{id}', name: 'detailUser', methods: ['GET'])]
-    #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour voir un user')]
+    #[IsGranted('ROLE_USER', message: 'You do not have sufficient rights to see a user')]
     public function getDetailUser(int $id, SerializerInterface $serializer, UserRepository $userRepository): JsonResponse
     {
 
         $user = $userRepository->find($id);
+        if ($user->getCustomer() !== $this->getUser()) {
+            return $this->json([
+                'status' => 403,
+                'message' => "Not authorized to see this user."
+            ], 403);
+        }
+        if ($user === null) {
+            return $this->json([
+                'status' => 404,
+                'message' => "This user doesn't exist"
+            ], 404);
+        }
+
         if ($user) {
             $context = SerializationContext::create()->setGroups(['customer:read']);
             $jsonUser = $serializer->serialize($user, 'json', $context);
@@ -117,28 +141,21 @@ class UserController extends AbstractController
      *       @OA\Schema(
      *         @OA\Property(property="firstname", type="string", example="John"),
      *         @OA\Property(property="lastname", description="The lastname of the new user.", type="string", example="Doe"),
-     *         @OA\Property(property="idCustomer", description="The idCustomer of the new user.", type="int", example="1"),
      *         @OA\Property(property="email", description="Email address of the new user.", type="string", format="email", example="j.doe91@yopmail.fr")
      *       )
      *     )
      *   ),
      * @OA\Response(
      *     response=200,
-     *     description="create user",
+     *     description="user created",
      *     @OA\JsonContent(
      *        type="array",
      *        @OA\Items(ref=@Model(type=User::class, groups={"customer:read"}))
      *     )
      * )
      *   ),
-     *   @OA\Response(
-     *      response=400,
-     *      description="Erreur de syntaxe"
-     *   ),
-     *   @OA\Response(
-     *     response=401,
-     *     description="JWT Token not found"
-     *   ),
+     * 
+     * @OA\Response(response=401, description="Expired JWT Token")
      *  
      * @OA\Tag(name="Users")
      *
@@ -147,26 +164,17 @@ class UserController extends AbstractController
      * @param Request $request
      * @return JsonResponse
      */
-    #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour créer un user')]
+    #[IsGranted('ROLE_USER', message: 'You do not have sufficient rights to create a user')]
     #[Route('/api/users', name: "createUser", methods: ['POST'])]
-    public function createUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator, CustomerRepository $customerRepository): JsonResponse
+    public function createUser(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator): JsonResponse
     {
         $user = $serializer->deserialize($request->getContent(), User::class, 'json');
 
-        // Récupération de l'ensemble des données envoyées sous forme de tableau
-        $content = $request->toArray();
-
-        // Récupération de l'idCustomer. S'il n'est pas défini, alors on met -1 par défaut.
-        $idCustomer = $content['idCustomer'] ?? -1;
         $created_at = new DateTime();
         $updated_at = new DateTime();
         $user->setCreatedAt($created_at);
         $user->setUpdatedAt($updated_at);
-
-        // On cherche customer qui correspond et on l'assigne au user.
-        // Si "find" ne trouve pas customer, alors null sera retourné.
-        $user->addCustomer($customerRepository->find($idCustomer));
-
+        $user->setCustomer($this->getUser());
         $entityManager->persist($user);
         $entityManager->flush();
 
@@ -189,7 +197,6 @@ class UserController extends AbstractController
      *       @OA\Schema(
      *         @OA\Property(property="firstname", type="string", example="John"),
      *         @OA\Property(property="lastname", description="The lastname of the new user.", type="string", example="Doe"),
-     *         @OA\Property(property="idCustomer", description="The idCustomer of the new user.", type="int", example="1"),
      *         @OA\Property(property="email", description="Email address of the new user.", type="string", format="email", example="j.doe91@yopmail.fr")
      *       )
      *     )
@@ -202,6 +209,13 @@ class UserController extends AbstractController
      *        @OA\Items(ref=@Model(type=User::class, groups={"customer:read"}))
      *     )
      * )
+     * 
+     * @OA\Response(response=404, description="This user doesn't exist")
+     * 
+     * @OA\Response(response=403, description="Not authorized to update this user")
+     * 
+     * @OA\Response(response=401, description="Expired JWT Token")
+     * 
      * @OA\Tag(name="Users")
      *
      * @param UserRepository $UserRepository
@@ -210,14 +224,25 @@ class UserController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/users/{id}', name: "updateUser", methods: ['PUT'])]
-    #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour modifier un user')]
+    #[IsGranted('ROLE_USER', message: 'You do not have sufficient rights to modify a user')]
     public function updateUser(Request $request, SerializerInterface $serializer, User $currentUser, CustomerRepository $customerRepository, EntityManagerInterface $entityManager, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
     {
+        if ($currentUser->getCustomer() !== $this->getUser()) {
+            return $this->json([
+                'status' => 403,
+                'message' => "Not authorized to update this user."
+            ], 403);
+        }
+        if ($currentUser === null) {
+            return $this->json([
+                'status' => 404,
+                'message' => "This user doesn't exist"
+            ], 404);
+        }
         $updatedUser = $serializer->deserialize($request->getContent(), User::class, 'json');
         $currentUser->setFirstname($updatedUser->getFirstname());
         $currentUser->setLastname($updatedUser->getLastname());
         $currentUser->setEmail($updatedUser->getEmail());
-        $currentUser->setRoles($updatedUser->getRoles());
         $updated_at = new DateTime();
         $currentUser->setUpdatedAt($updated_at);
         // On vérifie les erreurs
@@ -225,10 +250,6 @@ class UserController extends AbstractController
         if ($errors->count() > 0) {
             return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
         }
-
-        $content = $request->toArray();
-        $idCustomer = $content['idCustomer'] ?? -1;
-        $currentUser->addCustomer($customerRepository->find($idCustomer));
 
         $entityManager->persist($currentUser);
         $entityManager->flush();
@@ -249,6 +270,13 @@ class UserController extends AbstractController
      *        @OA\Items(ref=@Model(type=User::class, groups={"customer:read"}))
      *     )
      * )
+     * 
+     * @OA\Response(response=404, description="This user doesn't exist")
+     * 
+     * @OA\Response(response=403, description="Not authorized to delete this user")
+     * 
+     * @OA\Response(response=401, description="Expired JWT Token")
+     * 
      * @OA\Tag(name="Users")
      *
      * @param UserRepository $UserRepository
@@ -257,11 +285,22 @@ class UserController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/users/{id}', name: 'deleteUser', methods: ['DELETE'])]
-    #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour supprimer un user')]
+    #[IsGranted('ROLE_USER', message: 'You do not have sufficient rights to delete a user')]
     public function deleteUser(User $user, EntityManagerInterface $entityManager, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $cachePool->invalidateTags(["usersCache"]);
-
+        if ($user->getCustomer() !== $this->getUser()) {
+            return $this->json([
+                'status' => 403,
+                'message' => "Not authorized to delete this user."
+            ], 403);
+        }
+        if ($user === null) {
+            return $this->json([
+                'status' => 404,
+                'message' => "This user doesn't exist"
+            ], 404);
+        }
         $entityManager->remove($user);
         $entityManager->flush();
 
