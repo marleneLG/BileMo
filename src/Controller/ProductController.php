@@ -56,7 +56,6 @@ class ProductController extends AbstractController
      * @return JsonResponse
      */
     #[Route('api/products', name: 'app_product', methods: ['GET'])]
-    #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour voir les produits')]
     public function getProductList(ProductRepository $productRepository, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $page = $request->get('page', 1);
@@ -92,7 +91,6 @@ class ProductController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/products/{id}', name: 'detailProduct', methods: ['GET'])]
-    #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour voir le produit')]
     public function getDetailProduct(int $id, SerializerInterface $serializer, ProductRepository $productRepository): JsonResponse
     {
         $product = $productRepository->find($id);

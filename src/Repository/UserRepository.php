@@ -29,6 +29,17 @@ class UserRepository extends ServiceEntityRepository
         return $qb->getQuery()->getResult();
     }
 
+    public function findAllUsersForCustomer(int $page, int $limit, $customer): array
+    {
+        $qb = $this->createQueryBuilder('u')
+            ->andWhere('u.customer = :customer')
+            ->setParameter('customer', $customer)
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit);
+        return $qb->getQuery()->getResult();
+    }
+
+
     //    /**
     //     * @return User[] Returns an array of User objects
     //     */

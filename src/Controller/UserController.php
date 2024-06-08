@@ -61,7 +61,7 @@ class UserController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/users', name: 'app_user', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to see them use')]
+    #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to see them user')]
     public function getUserList(UserRepository $userRepository, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $page = $request->get('page', 1);
@@ -76,6 +76,63 @@ class UserController extends AbstractController
 
             return  $serializer->serialize($userList, 'json', $context);
         });
+        return new JsonResponse($jsonUserList, Response::HTTP_OK, [], true);
+    }
+
+    /**
+     * This method allows to recover all users for a custommer.
+     *
+     * @OA\Response(
+     *     response=200,
+     *     description="Returns the list of users",
+     *     @OA\JsonContent(
+     *        type="array",
+     *        @OA\Items(ref=@Model(type=User::class, groups={"customer:read"}))
+     *     )
+     * )
+     * @OA\Parameter(
+     *     name="page",
+     *     in="query",
+     *     description="The page you want to retrieve",
+     *     @OA\Schema(type="int")
+     * )
+     *
+     * @OA\Parameter(
+     *     name="limit",
+     *     in="query",
+     *     description="The number of items you want to recover",
+     *     @OA\Schema(type="int")
+     * )
+     * 
+     * @OA\Response(response=401, description="Expired JWT Token")
+     * 
+     * @OA\Tag(name="Users")
+     *
+     * @param UserRepository $UserRepository
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @return JsonResponse
+     */
+    #[Route('/api/users/customers', name: 'app_user_customer', methods: ['GET'])]
+    #[IsGranted('ROLE_USER', message: 'You do not have sufficient rights to see them user')]
+
+    public function getUserListForCustomer(UserRepository $userRepository, SerializerInterface $serializer, Request $request, TagAwareCacheInterface $cachePool): JsonResponse
+    {
+        $page = $request->get('page', 1);
+        $limit = $request->get('limit', 1);
+        $idCache = "getAllUsers-" . $page . "-" . $limit;
+        $customer = $this->getUser();
+
+        $jsonUserList = $cachePool->get($idCache, function (ItemInterface $item) use ($userRepository, $page, $limit, $serializer, $customer) {
+            $item->tag("usersCache");
+
+            $userList = $userRepository->findAllUsersForCustomer($page, $limit, $customer);
+
+            $context = SerializationContext::create()->setGroups(['customer:read']);
+
+            return  $serializer->serialize($userList, 'json', $context);
+        });
+
         return new JsonResponse($jsonUserList, Response::HTTP_OK, [], true);
     }
 
