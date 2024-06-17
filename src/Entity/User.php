@@ -47,7 +47,7 @@ use OpenApi\Annotations as OA;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
-class User implements UserInterface
+class User
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -58,13 +58,6 @@ class User implements UserInterface
     #[ORM\Column(length: 180)]
     #[Groups(['customer:read'])]
     private ?string $email = null;
-
-    /**
-     * @var list<string> The user roles
-     */
-    #[ORM\Column]
-    #[Groups(['customer:read'])]
-    private array $roles = [];
 
     #[ORM\Column(length: 255)]
     #[Groups(['customer:read'])]
@@ -116,30 +109,6 @@ class User implements UserInterface
     public function getUserIdentifier(): string
     {
         return (string) $this->email;
-    }
-
-    /**
-     * @see UserInterface
-     *
-     * @return list<string>
-     */
-    public function getRoles(): array
-    {
-        $roles = $this->roles;
-        // guarantee every user at least has ROLE_USER
-        $roles[] = '';
-
-        return array_unique($roles);
-    }
-
-    /**
-     * @param list<string> $roles
-     */
-    public function setRoles(array $roles): static
-    {
-        $this->roles = $roles;
-
-        return $this;
     }
 
     /**
