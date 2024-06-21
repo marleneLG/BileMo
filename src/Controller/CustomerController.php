@@ -160,6 +160,12 @@ class CustomerController extends AbstractController
 
         $customer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
 
+        if (empty($customer->getName()) || empty($customer->getPassword()) || empty($customer->getEmail())) {
+            return $this->json([
+                'status' => 'Erreur',
+                'message' => "Empty field"
+            ]);
+        }
         $created_at = new DateTime();
         $updated_at = new DateTime();
         $customer->setCreatedAt($created_at);
@@ -221,6 +227,13 @@ class CustomerController extends AbstractController
                 'status' => 404,
                 'message' => "This customer doesn't exist"
             ], 404);
+        }
+
+        if (empty($currentCustomer->getName()) || empty($currentCustomer->getPassword()) || empty($currentCustomer->getEmail())) {
+            return $this->json([
+                'status' => 'Erreur',
+                'message' => "Empty field"
+            ]);
         }
         $updatedCustomer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
         $currentCustomer->setName($updatedCustomer->getName());

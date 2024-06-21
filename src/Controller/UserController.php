@@ -227,6 +227,13 @@ class UserController extends AbstractController
     {
         $user = $serializer->deserialize($request->getContent(), User::class, 'json');
 
+        if (empty($user->getFirstname()) || empty($user->getLastname()) || empty($user->getEmail())) {
+            return $this->json([
+                'status' => 'Erreur',
+                'message' => "Empty field"
+            ]);
+        }
+
         $created_at = new DateTime();
         $updated_at = new DateTime();
         $user->setCreatedAt($created_at);
@@ -296,6 +303,14 @@ class UserController extends AbstractController
                 'message' => "This user doesn't exist"
             ], 404);
         }
+
+        if (empty($currentUser->getFirstname()) || empty($currentUser->getLastname()) || empty($currentUser->getEmail())) {
+            return $this->json([
+                'status' => 'Erreur',
+                'message' => "Empty field"
+            ]);
+        }
+
         $updatedUser = $serializer->deserialize($request->getContent(), User::class, 'json');
         $currentUser->setFirstname($updatedUser->getFirstname());
         $currentUser->setLastname($updatedUser->getLastname());
