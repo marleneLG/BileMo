@@ -22,6 +22,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use Nelmio\ApiDocBundle\Annotation\Security;
 use OpenApi\Annotations as OA;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+
 
 class CustomerController extends AbstractController
 {
@@ -145,11 +147,15 @@ class CustomerController extends AbstractController
      *  
      * )
      *   @OA\Tag(name="Customers")
-     * @Route("/api/customers", name="createCustomer",methods={"POST"})
+     * 
+     * @param CustomerRepository $CustomerRepository
+     * @param SerializerInterface $serializer
+     * @param Request $request
+     * @return JsonResponse 
      */
-    #[Route('/api/customers', name: "createCustomer", methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to create customers')]
-    public function createCustomer(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator, UserRepository $userRepository): JsonResponse
+    #[Route('/api/customers', name: "createCustomer", methods: ['POST'])]
+    public function createCustomer(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator, UserPasswordHasherInterface $customerPassword): JsonResponse
     {
 
         $customer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
@@ -159,6 +165,7 @@ class CustomerController extends AbstractController
         $customer->setCreatedAt($created_at);
         $customer->setUpdatedAt($updated_at);
         $customer->setRoles(array('ROLE_USER'));
+        $customer->setPassword($customerPassword->hashPassword($customer, $customer->getPassword()));
 
         $entityManager->persist($customer);
         $entityManager->flush();
@@ -207,7 +214,7 @@ class CustomerController extends AbstractController
      */
     #[Route('/api/customers/{id}', name: "updateCustomer", methods: ['PUT'])]
     #[IsGranted('ROLE_ADMIN', message: 'You do not have sufficient rights to modify customers')]
-    public function updateCustomer(Request $request, SerializerInterface $serializer, Customer $currentCustomer, EntityManagerInterface $entityManager, UserRepository $userRepository, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
+    public function updateCustomer(Request $request, SerializerInterface $serializer, Customer $currentCustomer, EntityManagerInterface $entityManager, UserPasswordHasherInterface $customerPassword, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
     {
         if ($currentCustomer === null) {
             return $this->json([
@@ -219,6 +226,8 @@ class CustomerController extends AbstractController
         $currentCustomer->setName($updatedCustomer->getName());
         $currentCustomer->setEmail($updatedCustomer->getEmail());
         $currentCustomer->setRoles($updatedCustomer->getRoles());
+        $currentCustomer->setPassword($customerPassword->hashPassword($currentCustomer, $currentCustomer->getPassword()));
+
         $updated_at = new DateTime();
         $currentCustomer->setUpdatedAt($updated_at);
         // On vérifie les erreurs
