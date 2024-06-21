@@ -136,6 +136,13 @@ class ProductController extends AbstractController
     public function createProduct(Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator): JsonResponse
     {
         $product = $serializer->deserialize($request->getContent(), Product::class, 'json');
+        if (empty($product->getName()) || empty($product->getDescription()) || empty($product->getPrice())) {
+            return $this->json([
+                'status' => 'Erreur',
+                'message' => "Empty field"
+            ]);
+        }
+
         $created_at = new DateTime();
         $updated_at = new DateTime();
         $product->setCreatedAt($created_at);
@@ -184,6 +191,14 @@ class ProductController extends AbstractController
     public function updateProduct(Request $request, SerializerInterface $serializer, Product $currentProduct, EntityManagerInterface $entityManager, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
     {
         $updatedProduct = $serializer->deserialize($request->getContent(), Product::class, 'json');
+
+        if (empty($currentProduct->getName()) || empty($currentProduct->getDescription()) || empty($currentProduct->getPrice())) {
+            return $this->json([
+                'status' => 'Erreur',
+                'message' => "Empty field"
+            ]);
+        }
+
         $currentProduct->setName($updatedProduct->getName());
         $currentProduct->setDescription($updatedProduct->getDescription());
         $currentProduct->setPrice($updatedProduct->getPrice());
